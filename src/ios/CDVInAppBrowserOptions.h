@@ -36,6 +36,7 @@
 @property (nonatomic, assign) BOOL hidespinner;
 @property (nonatomic, copy) NSString* title;
 @property (nonatomic, copy) NSString* titlecolor;
+@property (nonatomic, copy) NSString* statusbarcolor;
 
 @property (nonatomic, copy) NSString* presentationstyle;
 @property (nonatomic, copy) NSString* transitionstyle;
