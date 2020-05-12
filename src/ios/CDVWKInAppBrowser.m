@@ -213,6 +213,10 @@ static CDVWKInAppBrowser* instance = nil;
         int closeButtonIndex = browserOptions.lefttoright ? (browserOptions.hidenavigationbuttons ? 1 : 4) : 0;
         [self.inAppBrowserViewController setCloseButtonTitle:browserOptions.closebuttoncaption :browserOptions.closebuttoncolor :closeButtonIndex];
     }
+    if (browserOptions.title != nil || browserOptions.titlecolor != nil) {
+        NSLog(browserOptions.titlecolor);
+        [self.inAppBrowserViewController setTitle:browserOptions.title : browserOptions.titlecolor ];
+    }
     // Set Presentation Style
     UIModalPresentationStyle presentationStyle = UIModalPresentationFullScreen; // default
     if (browserOptions.presentationstyle != nil) {
@@ -896,7 +900,7 @@ BOOL isExiting = FALSE;
         [self.toolbar setItems:@[self.closeButton, flexibleSpaceButton, self.backButton, fixedSpaceButton, self.forwardButton]];
     }
     
-    self.view.backgroundColor = [UIColor grayColor];
+    self.view.backgroundColor = [UIColor whiteColor];
     [self.view addSubview:self.toolbar];
     [self.view addSubview:self.addressLabel];
     [self.view addSubview:self.spinner];
@@ -912,6 +916,25 @@ BOOL isExiting = FALSE;
     [self.webView setFrame:frame];
 }
 
+- (void)setTitle:(NSString*)title : (NSString*) colorString
+{
+    UILabel *labelTitle = [[UILabel alloc] init];
+    labelTitle.font =[UIFont fontWithName:@"HelveticaNeue-Light" size:18];
+    labelTitle.textColor = colorString != nil ? [self colorFromHexString:colorString] : [UIColor colorWithRed:60.0 / 255.0 green:136.0 / 255.0 blue:230.0 / 255.0 alpha:1];
+    labelTitle.backgroundColor = [UIColor clearColor];
+    labelTitle.textAlignment = UITextAlignmentCenter;
+    labelTitle.userInteractionEnabled = NO;
+    labelTitle.text = title;
+    [labelTitle sizeToFit];
+    CGRect labelTitleFrame = labelTitle.frame;
+    labelTitleFrame.size.width = self.toolbar.bounds.size.width;
+    labelTitleFrame.origin.y = (self.toolbar.bounds.size.height - labelTitleFrame.size.height) / 2;
+    labelTitle.frame = labelTitleFrame;
+    labelTitle.autoresizingMask = UIViewAutoresizingFlexibleWidth;
+    [self.toolbar addSubview:labelTitle];
+    labelTitle = nil;
+}
+
 - (void)setCloseButtonTitle:(NSString*)title : (NSString*) colorString : (int) buttonIndex
 {
     // the advantage of using UIBarButtonSystemItemDone is the system will localize it for you automatically
@@ -922,7 +945,7 @@ BOOL isExiting = FALSE;
     self.closeButton.enabled = YES;
     // If color on closebutton is requested then initialize with that that color, otherwise use initialize with default
     self.closeButton.tintColor = colorString != nil ? [self colorFromHexString:colorString] : [UIColor colorWithRed:60.0 / 255.0 green:136.0 / 255.0 blue:230.0 / 255.0 alpha:1];
-    
+    self.title = nil;
     NSMutableArray* items = [self.toolbar.items mutableCopy];
     [items replaceObjectAtIndex:buttonIndex withObject:self.closeButton];
     [self.toolbar setItems:items];
@@ -1097,13 +1120,32 @@ BOOL isExiting = FALSE;
     [self.webView goForward];
 }
 
+- (BOOL)hasTopNotch {
+    if (@available(iOS 11.0, *)) {
+        return [[[UIApplication sharedApplication] delegate] window].safeAreaInsets.top > 20.0;
+    }
+
+    return  NO;
+}
+
 - (void)viewWillAppear:(BOOL)animated
 {
     if (IsAtLeastiOSVersion(@"7.0") && !viewRenderedAtLeastOnce) {
         viewRenderedAtLeastOnce = TRUE;
         CGRect viewBounds = [self.webView bounds];
-        viewBounds.origin.y = STATUSBAR_HEIGHT;
-        viewBounds.size.height = viewBounds.size.height - STATUSBAR_HEIGHT;
+                
+        //simplified from https://github.com/apache/cordova-plugin-inappbrowser/issues/301#issuecomment-452220131
+        //and https://stackoverflow.com/questions/46192280/detect-if-the-device-is-iphone-x
+        bool hasTopNotch = NO;
+        if (@available(iOS 11.0, *)) {
+            hasTopNotch = [[[UIApplication sharedApplication] delegate] window].safeAreaInsets.top > 20.0;
+        }
+        if(!hasTopNotch){
+            viewBounds.origin.y = STATUSBAR_HEIGHT;
+            viewBounds.size.height = viewBounds.size.height - STATUSBAR_HEIGHT;
+        }
+
+
         self.webView.frame = viewBounds;
         [[UIApplication sharedApplication] setStatusBarStyle:[self preferredStatusBarStyle]];
     }
@@ -1125,7 +1167,7 @@ BOOL isExiting = FALSE;
 
 - (void) rePositionViews {
     if ([_browserOptions.toolbarposition isEqualToString:kInAppBrowserToolbarBarPositionTop]) {
-        [self.webView setFrame:CGRectMake(self.webView.frame.origin.x, TOOLBAR_HEIGHT, self.webView.frame.size.width, self.webView.frame.size.height)];
+        [self.webView setFrame:CGRectMake(self.webView.frame.origin.x, TOOLBAR_HEIGHT + [self getStatusBarOffset], self.webView.frame.size.width, self.webView.frame.size.height)];
         [self.toolbar setFrame:CGRectMake(self.toolbar.frame.origin.x, [self getStatusBarOffset], self.toolbar.frame.size.width, self.toolbar.frame.size.height)];
     }
 }
